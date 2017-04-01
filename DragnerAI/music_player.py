@@ -157,14 +157,39 @@ class Music:
             await state.songs.put(entry)
 
     @commands.command(pass_context=True, no_pm=True)
+    async def jkm(self, ctx):
+        print(type(ctx))
+        author_roles = ctx.message.author.roles
+
+        roles = ctx.message.server.roles
+
+        role = [x for x in roles if str(x) == 'Władca Botów']
+
+        print('----')
+        print(role[0])
+        print('----')
+        if role[0] in author_roles:
+            print('no witam witam')
+        if role[0] in roles:
+            print('dupa')
+        for role in roles:
+            print(str(role))
+        await self.bot.send_message(ctx.message.channel, '2137')
+
+    @commands.command(pass_context=True, no_pm=True)
     async def volume(self, ctx, value: int):
         """Sets the volume of the currently playing song."""
+        author_roles = ctx.message.author.roles
 
-        state = self.get_voice_state(ctx.message.server)
-        if state.is_playing():
-            player = state.player
-            player.volume = value / 100
-            await self.bot.say('Set the volume to {:.0%}'.format(player.volume))
+        roles = ctx.message.server.roles
+        role = [x for x in roles if str(x) == 'Władca Botów']
+
+        if role[0] in author_roles:
+            state = self.get_voice_state(ctx.message.server)
+            if state.is_playing():
+                player = state.player
+                player.volume = value / 100
+                await self.bot.say('Set the volume to {:.0%}'.format(player.volume))
 
     @commands.command(pass_context=True, no_pm=True)
     async def pause(self, ctx):
@@ -185,7 +210,7 @@ class Music:
     @commands.command(pass_context=True, no_pm=True)
     async def stop(self, ctx):
         """Stops playing audio and leaves the voice channel.
-
+    
         This also clears the queue.
         """
         server = ctx.message.server
@@ -205,7 +230,7 @@ class Music:
     @commands.command(pass_context=True, no_pm=True)
     async def skip(self, ctx):
         """Vote to skip a song. The song requester can automatically skip.
-
+    
         3 skip votes are needed for the song to be skipped.
         """
 
@@ -241,13 +266,54 @@ class Music:
             await self.bot.say('Now playing {} [skips: {}/3]'.format(state.current, skip_count))
 
 
-bot = commands.Bot(command_prefix=commands.when_mentioned_or('$'), description='A playlist example for discord.py')
-bot.add_cog(Music(bot))
+class AdditionalCommands:
+    """Voice related commands.
 
+    Works in multiple servers at once.
+    """
 
-@bot.event
-async def on_ready():
-    print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
+    def __init__(self, bot):
+        self.bot = bot
+        self.voice_states = {}
 
+    def get_voice_state(self, server):
+        state = self.voice_states.get(server.id)
+        if state is None:
+            state = VoiceState(self.bot)
+            self.voice_states[server.id] = state
 
-bot.run('Mjk3NDA5NTM2NTAyMDA1NzYw.C8AYNQ.HBd5e_Q2pYLBzz6iSGOqw9YhyuU')
+        return state
+
+    async def create_voice_client(self, channel):
+        voice = await self.bot.join_voice_channel(channel)
+        state = self.get_voice_state(channel.server)
+        state.voice = voice
+
+    def __unload(self):
+        for state in self.voice_states.values():
+            try:
+                state.audio_player.cancel()
+                if state.voice:
+                    self.bot.loop.create_task(state.voice.disconnect())
+            except:
+                pass
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def dd(self, ctx):
+        print(type(ctx))
+        author_roles = ctx.message.author.roles
+
+        roles = ctx.message.server.roles
+
+        role = [x for x in roles if str(x) == 'Władca Botów']
+
+        print('----')
+        print(role[0])
+        print('----')
+        if role[0] in author_roles:
+            print('no witam witam')
+        if role[0] in roles:
+            print('dupa')
+        for role in roles:
+            print(str(role))
+        await self.bot.send_message(ctx.message.channel, '1488')
