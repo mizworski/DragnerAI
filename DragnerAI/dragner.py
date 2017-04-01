@@ -1,5 +1,5 @@
 from discord.ext import commands
-from DragnerAI.music_player import Music, AdditionalCommands
+from music_player import Music, AdditionalCommands
 
 bot_token = 'Mjk3NDA5NTM2NTAyMDA1NzYw.C8AYNQ.HBd5e_Q2pYLBzz6iSGOqw9YhyuU'
 
