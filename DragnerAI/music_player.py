@@ -154,28 +154,30 @@ class Music:
         else:
             player.volume = 0.6
             entry = VoiceEntry(ctx.message, player)
+            await self.bot.delete_message(ctx.message)
             await self.bot.say('Enqueued ' + str(entry))
             await state.songs.put(entry)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def jkm(self, ctx):
-        print(type(ctx))
-        author_roles = ctx.message.author.roles
+    async def songs(self, ctx):
+        """Lists all songs in the queue."""
+        state = self.get_voice_state(ctx.message.server)
+        await self.bot.delete_message(ctx.message)
 
-        roles = ctx.message.server.roles
+        if not state.is_playing():
+            await self.bot.say('Not playing any music right now...')
+        else:
+            await self.bot.say('Now playing {}'.format(state.current))
 
-        role = [x for x in roles if str(x) == 'Władca Botów']
+            songs_in_queue = state.songs.qsize()
 
-        print('----')
-        print(role[0])
-        print('----')
-        if role[0] in author_roles:
-            print('no witam witam')
-        if role[0] in roles:
-            print('dupa')
-        for role in roles:
-            print(str(role))
-        await self.bot.send_message(ctx.message.channel, '2137')
+            if songs_in_queue > 0:
+                await self.bot.say('Upcoming songs:')
+                for i in range(0, songs_in_queue):
+                    entry = await state.songs.get()
+                    await self.bot.say(str(i + 1) + ': ' + str(entry))
+                    await state.songs.put(entry)
+
 
     @commands.command(pass_context=True, no_pm=True)
     async def volume(self, ctx, value: int):
@@ -190,7 +192,7 @@ class Music:
             if state.is_playing():
                 player = state.player
                 player.volume = value / 100
-                await self.bot.say('Set the volume to {:.0%}'.format(player.volume))
+                await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, no_pm=True)
     async def pause(self, ctx):
@@ -199,6 +201,7 @@ class Music:
         if state.is_playing():
             player = state.player
             player.pause()
+            await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, no_pm=True)
     async def resume(self, ctx):
@@ -236,35 +239,25 @@ class Music:
         """
 
         state = self.get_voice_state(ctx.message.server)
+        await self.bot.delete_message(ctx.message)
         if not state.is_playing():
             await self.bot.say('Not playing any music right now...')
             return
 
-        voter = ctx.message.author
-        if voter == state.current.requester:
-            await self.bot.say('Requester requested skipping song...')
-            state.skip()
-        elif voter.id not in state.skip_votes:
-            state.skip_votes.add(voter.id)
-            total_votes = len(state.skip_votes)
-            if total_votes >= 3:
-                await self.bot.say('Skip vote passed, skipping song...')
-                state.skip()
-            else:
-                await self.bot.say('Skip vote added, currently at [{}/3]'.format(total_votes))
-        else:
-            await self.bot.say('You have already voted to skip this song.')
+        await self.bot.say('Skipping song...')
+        state.skip()
+
 
     @commands.command(pass_context=True, no_pm=True)
     async def playing(self, ctx):
         """Shows info about the currently played song."""
 
         state = self.get_voice_state(ctx.message.server)
-        if state.current is None:
-            await self.bot.say('Not playing anything.')
+        await self.bot.delete_message(ctx.message)
+        if not state.is_playing():
+            await self.bot.say('Not playing any music right now...')
         else:
-            skip_count = len(state.skip_votes)
-            await self.bot.say('Now playing {} [skips: {}/3]'.format(state.current, skip_count))
+            await self.bot.say('Now playing {}'.format(state.current))
 
 
 class AdditionalCommands:
@@ -298,23 +291,3 @@ class AdditionalCommands:
                     self.bot.loop.create_task(state.voice.disconnect())
             except:
                 pass
-
-    @commands.command(pass_context=True, no_pm=True)
-    async def dd(self, ctx):
-        print(type(ctx))
-        author_roles = ctx.message.author.roles
-
-        roles = ctx.message.server.roles
-
-        role = [x for x in roles if str(x) == 'Władca Botów']
-
-        print('----')
-        print(role[0])
-        print('----')
-        if role[0] in author_roles:
-            print('no witam witam')
-        if role[0] in roles:
-            print('dupa')
-        for role in roles:
-            print(str(role))
-        await self.bot.send_message(ctx.message.channel, '1488')
