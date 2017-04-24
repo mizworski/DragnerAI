@@ -1,7 +1,12 @@
+import json
+
 from discord.ext import commands
 from music_player import Music, AdditionalCommands
 
-bot_token = 'Mjk3NDA5NTM2NTAyMDA1NzYw.C8AYNQ.HBd5e_Q2pYLBzz6iSGOqw9YhyuU'
+with open('data.json') as data_file:
+    data = json.load(data_file)
+
+bot_token = data['bot_token']
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('/'), description='A playlist example for discord.py')
 bot.add_cog(Music(bot))
