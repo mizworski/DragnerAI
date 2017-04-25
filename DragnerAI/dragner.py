@@ -1,9 +1,10 @@
 import json
 
 from discord.ext import commands
-from music_player import Music, AdditionalCommands
+from DragnerAI.music_player import Music, AdditionalCommands
+from DragnerAI.spotify import Spotify
 
-with open('data.json') as data_file:
+with open('discord_login.json') as data_file:
     data = json.load(data_file)
 
 bot_token = data['bot_token']
@@ -11,6 +12,7 @@ bot_token = data['bot_token']
 bot = commands.Bot(command_prefix=commands.when_mentioned_or('/'), description='A playlist example for discord.py')
 bot.add_cog(Music(bot))
 bot.add_cog(AdditionalCommands(bot))
+bot.add_cog(Spotify(bot))
 
 
 @bot.event

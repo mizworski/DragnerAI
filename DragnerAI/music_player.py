@@ -1,6 +1,8 @@
 import asyncio
 import discord
 from discord.ext import commands
+from DragnerAI.spotify_module.SpotifyAdd import SpotifyAdd
+from DragnerAI.database import get_user_id
 
 
 # if not discord.opus.is_loaded():
@@ -17,6 +19,7 @@ class VoiceEntry:
         self.requester = message.author
         self.channel = message.channel
         self.player = player
+        self.sp = SpotifyAdd()
 
     def __str__(self):
         fmt = '*{0.title}* uploaded by {0.uploader} and requested by {1.display_name}'
@@ -73,6 +76,7 @@ class Music:
     def __init__(self, bot):
         self.bot = bot
         self.voice_states = {}
+        self.sp = SpotifyAdd()
 
     def get_voice_state(self, server):
         state = self.voice_states.get(server.id)
@@ -178,6 +182,69 @@ class Music:
                     await self.bot.say(str(i + 1) + ': ' + str(entry))
                     await state.songs.put(entry)
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def enqueue(self, ctx, *, msg: str):
+        params = msg.split()
+        limit = 3
+
+        if len(params) != 2 and len(params) != 3:
+            await self.bot.say('Wrong number of parameters')
+            return
+
+        if len(params) == 3:
+            limit = int(params[2])
+
+        user_id = get_user_id(params[0])
+        index = params[1]
+        playlist_info = self.sp.get_playlist(user_id, index)
+        name = playlist_info[0]
+        songs = playlist_info[1]
+
+        await self.bot.say('Enqueuing ' + str(limit) + ' songs from: ' + name)
+
+        state = self.get_voice_state(ctx.message.server)
+        opts = {
+            'default_search': 'auto',
+            'quiet': True,
+        }
+
+        if state.voice is None:
+            success = await ctx.invoke(self.summon)
+            if not success:
+                return
+
+        i = 0
+        message = ''
+        for song in songs:
+            artists = ''
+            for artist in song[1]:
+                artists += ' ' + artist
+
+            request = song[0] + ' -' + artists
+            message += str(i + 1) + ': ' + request + '\n'
+            i += 1
+
+            try:
+                player = await state.voice.create_ytdl_player(request, ytdl_options=opts, after=state.toggle_next)
+            except Exception as e:
+                fmt = 'An error occurred while processing this request: ```py\n{}: {}\n```'
+                await self.bot.send_message(ctx.message.channel, fmt.format(type(e).__name__, e))
+            else:
+                player.volume = 0.6
+                entry = VoiceEntry(ctx.message, player)
+                # await self.bot.delete_message(ctx.message)
+                await self.bot.say('Enqueued ' + str(entry))
+                await state.songs.put(entry)
+
+            if i == limit:
+                break
+
+            if i % 50 == 0:
+                await self.bot.say(message)
+                message = ''
+
+        if not message == '':
+            await self.bot.say(message)
 
     @commands.command(pass_context=True, no_pm=True)
     async def volume(self, ctx, value: int):
@@ -210,6 +277,7 @@ class Music:
         if state.is_playing():
             player = state.player
             player.resume()
+        await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, no_pm=True)
     async def stop(self, ctx):
@@ -219,6 +287,7 @@ class Music:
         """
         server = ctx.message.server
         state = self.get_voice_state(server)
+        await self.bot.delete_message(ctx.message)
 
         if state.is_playing():
             player = state.player
@@ -246,7 +315,6 @@ class Music:
 
         await self.bot.say('Skipping song...')
         state.skip()
-
 
     @commands.command(pass_context=True, no_pm=True)
     async def playing(self, ctx):
